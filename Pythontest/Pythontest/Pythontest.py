@@ -92,13 +92,15 @@ class DecisionTree:
         gDA = HD - HDA
         if self.criterion == "ID3":#ID3
             result = gDA
-        else:#ID4.5
+        elif self.criterion == "ID4.5":#ID4.5
             a = self.calculate_N(x)#样本分类个数
             HA = -1 * self.calculate_H(a,len(x))
             if HA != 0:
                 result = gDA / HA
             else:
                 result = gDA
+        else:#gini
+            result = gDA
         return result
 
     #计算列表并分类
