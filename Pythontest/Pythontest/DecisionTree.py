@@ -73,7 +73,8 @@ class DecisionTree:
         tree1['index'] = max_index
         tree1['A'] = A
         tree1['depth'] = depth
-        # 判定熵值是否有效
+        tree1['Cr'] = max1*1*len(data)#剪枝后的评价数
+        # 判定熵值和树深是否有效
         if max1 > 0.001 and self.max_depth > depth:
             x1 = list(x[:, max_index])
             for key, value in A.items():
@@ -194,48 +195,8 @@ def iris_type(s):
 iris_feature = u'花萼长度', u'花萼宽度', u'花瓣长度', u'花瓣宽度'
 
 if __name__ == "__main__":
-    ##x = np.array([1,2,2,3,3,3,1,1,1,2,1,3]).reshape(12,1)
-    ##y = np.array([2,2,2,3,1,3,1,1,1,2,1,4]).reshape(12,1)
-    #de = DecisionTree()
-    ##s = set(x.reshape(1,12).tolist()[0])
-    # print("x="+str(x.reshape(1,12)))
-    # print("x="+str(x.reshape(1,12).tolist()[0]))
-    # print("s="+str(s))
-    ##print("x_N=" + str(de.calculate_N(x)))
-    ##print("y_N=" + str(de.calculate_N(y)))
-    ##print("M=" + str(de.calculate_M(x,y)))
-    ##print("M_n=" + str(de.calculate_N(de.calculate_M(x,y))))
-    ##print("En=" + str(de.calculateEntropy(x,y)))
-
-    ##N = 100
-    # x = np.random.rand(N) * 6 - 3 # [-3,3)
-    # x.sort()
-    ##y = np.sin(x) + np.random.randn(N) * 0.05
-    # print("y="+str(y))
-    # x = x.reshape(-1, 1) # 转置后，得到N个样本，每个样本都是1维的
-    # print("x="+str(x))
-
-    ##mpl.rcParams['font.sans-serif'] = [u'SimHei']
-    ##mpl.rcParams['axes.unicode_minus'] = False
-
-    # path = u'8.iris.data' # 数据文件路径
-    #df = pd.read_csv(path, header=0)
-    #x = df.values[:, :-1]
-    #y = df.values[:, -1]
-    #le = preprocessing.LabelEncoder()
-    #le.fit(['Iris-setosa', 'Iris-versicolor', 'Iris-virginica'])
-    # print(str(le.classes_))
-    #y = le.transform(y)
-    #print("x=" + str(x))
-    #print("y=" + str(y.reshape(len(y),1)))
-    # de.fit(x,y.reshape(len(y),1))
-    # print("tree="+str(de.tree))
-
-    #y_hat = de.predict(x)
-    #print("y_hat=" + str(y_hat))
     mpl.rcParams['font.sans-serif'] = [u'SimHei']
     mpl.rcParams['axes.unicode_minus'] = False
-
     path = u'D:\Python_machineLearn\Pythontest\Pythontest\8.iris.data'  # 数据文件路径
     df = pd.read_csv(path, header=0)
     x = df.values[:, :-1]
@@ -244,33 +205,19 @@ if __name__ == "__main__":
     print('y = \n', y)
     le = preprocessing.LabelEncoder()
     le.fit(['Iris-setosa', 'Iris-versicolor', 'Iris-virginica'])
-    # print(str(le.classes_))
     y = le.transform(y)
-    # print('Last Version, y = \n', y)
-    # data = np.loadtxt(path,
-    # delimiter=',',converters={4:iris_type},dtype=float)
-    # print(str(data))
-    # x, y = np.split(data, (4,), axis=1)
     # 为了可视化，仅使用前两列特征
     x = x[:, :2]
     x_train, x_test, y_train, y_test = train_test_split(
         x, y, test_size=0.5, random_state=1)
-    #ss = StandardScaler()
-    #ss = ss.fit(x_train)
 
     # 决策树参数估计
-    # min_samples_split = 10：如果该结点包含的样本数目大于10，则(有可能)对其分支
-    # min_samples_leaf = 10：若将某结点分支后，得到的每个子结点样本数目都大于10，则完成分支；否则，不进行分支
-    # model = Pipeline([
-    #    ('ss', StandardScaler()),
-    #    ('DTC', DecisionTreeClassifier(criterion='entropy', max_depth=6))])
     model = DecisionTree(criterion='gini')
-    # clf = DecisionTreeClassifier(criterion='entropy', max_depth=3)
     model = model.fit(x_train, y_train.reshape(len(y_train), 1))
     y_test_hat = model.predict(x_test)      # 测试数据
 
     # 保存
-    # dot -Tpng -o 1.png 1.dot
+    #dot -Tpng -o 1.png 1.dot
     #f = open('.\\iris_tree.dot', 'w')
     #tree.export_graphviz(model.get_params('DTC')['DTC'], out_file=f)
 
