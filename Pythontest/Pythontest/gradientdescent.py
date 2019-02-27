@@ -92,7 +92,7 @@ if __name__ == '__main__':
     # print('x=' + str(x))
     # print('y=' + str(y))
     model = gradientDescent()
-    model.set_params(poly__degree=4)
+    model.set_params(poly__degree=3)
     model.fit(x=x, y=y)
     theta = model.__getattribute__('theta')
     alpha = model.__getattribute__('alpha')

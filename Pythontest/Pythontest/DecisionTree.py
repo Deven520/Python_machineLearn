@@ -19,10 +19,10 @@ def tree():
 class DecisionTree:
 
     # 初始化
-    def __init__(self, criterion='ID4.5', max_depth=10):
+    def __init__(self, criterion='gini', max_depth=10):
         self.max_depth = max_depth  # 最大树深
         self.tree = tree()  # 树的生成结果
-        self.criterion = criterion  # 生成模式 ID3 或 ID4.5
+        self.criterion = criterion  # 生成模式 ID3 或 ID4.5 或 gini
 
     # 拟合函数
     def fit(self, x, y):
@@ -73,9 +73,10 @@ class DecisionTree:
         tree1['index'] = max_index
         tree1['A'] = A
         tree1['depth'] = depth
-        tree1['Cr'] = max1*1*len(data)#剪枝后的评价数
         # 判定熵值和树深是否有效
-        if max1 > 0.001 and self.max_depth > depth:
+        if max1 > 0.01 and self.max_depth > depth:
+            Cr = max1*1*len(data)
+            tree1['Cr'] = Cr   # 剪枝后的评价数
             x1 = list(x[:, max_index])
             for key, value in A.items():
                 indexs = self.calculate_indexInList(x1, key)
@@ -84,9 +85,46 @@ class DecisionTree:
                 y2 = data_new[:, -1]
                 tree1['child_' + str(key)] = self.CreateTree(x2,
                                                              y2.reshape(len(y2), 1), depth + 1)
+            CR = self.calculate_CR(tree1)
+            tree1['CR'] = CR
+            print("CR="+str(CR))
+            print("Cr="+str(Cr))
+            nk = self.calculate_Nk(tree1)
+            print("nk="+str(nk))
+            alpha = (Cr-CR)/(nk-1)
+            tree1['alpha'] = alpha
+            print("al="+str(alpha))
         else:
+            Cr = 0.01*1*len(data)
+            tree1['Cr'] = Cr   # 剪枝后的评价数
             tree1['y_hat'] = y[0]
         return tree1
+
+    # 计算CR
+    def calculate_CR(self, tree):
+        index = tree['index']
+        x_hat = x[index]
+        A = tree["A"]
+        if tree["y_hat"].__len__() != 0:
+            return float(tree['Cr'])
+        else:
+            result = 0
+            for key, value in A.items():
+                result = result+self.calculate_CR(tree['child_' + str(key)])
+            return result
+
+    # 计算子节点数
+    def calculate_Nk(self, tree):
+        index = tree['index']
+        x_hat = x[index]
+        A = tree["A"]
+        if tree["y_hat"].__len__() != 0:
+            return 1
+        else:
+            result = 0
+            for key, value in A.items():
+                result = result+self.calculate_Nk(tree['child_' + str(key)])
+            return result
 
     # 计算信息熵
     def calculateEntropy(self, x, y):
@@ -209,7 +247,7 @@ if __name__ == "__main__":
     # 为了可视化，仅使用前两列特征
     x = x[:, :2]
     x_train, x_test, y_train, y_test = train_test_split(
-        x, y, test_size=0.5, random_state=1)
+        x, y, test_size=0.15, random_state=1)
 
     # 决策树参数估计
     model = DecisionTree(criterion='gini')
@@ -217,7 +255,7 @@ if __name__ == "__main__":
     y_test_hat = model.predict(x_test)      # 测试数据
 
     # 保存
-    #dot -Tpng -o 1.png 1.dot
+    # dot -Tpng -o 1.png 1.dot
     #f = open('.\\iris_tree.dot', 'w')
     #tree.export_graphviz(model.get_params('DTC')['DTC'], out_file=f)
 
