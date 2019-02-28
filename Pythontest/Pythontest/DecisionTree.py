@@ -63,17 +63,19 @@ class DecisionTree:
         # 遍历获取熵值列表
         for i in range(acount_A):
             x1 = x[:, i]
+            x1 = self.calculate_sortInTwo(x1,y)
             d.append(self.calculateEntropy(x1, y))
         max1 = max(d)  # 最大熵值
         max_index = d.index(max1)  # 获得最大熵的索引值
-        A = self.calculate_N(x[:, max_index])  # 最大熵的特征值分类
+        x1 = self.calculate_sortInTwo(x[:, max_index],y)
+        A = self.calculate_N(x1)  # 最大熵的特征值分类
         # 节点符值
         tree1['Entropy'] = max1
         tree1['Sample'] = len(data)
         tree1['index'] = max_index
         tree1['A'] = A
         tree1['depth'] = depth
-        # 判定熵值和树深是否有效
+        # 判定熵值和树深是否有效(预剪枝)
         if max1 > 0.01 and self.max_depth > depth:
             Cr = max1*1*len(data)
             tree1['Cr'] = Cr   # 剪枝后的评价数
@@ -95,9 +97,18 @@ class DecisionTree:
             tree1['alpha'] = alpha
             print("al="+str(alpha))
         else:
-            Cr = 0.01*1*len(data)
+            Cr = max1*1*len(data)
             tree1['Cr'] = Cr   # 剪枝后的评价数
-            tree1['y_hat'] = y[0]
+            print("Cr="+str(Cr))
+            print("depth="+str(depth))
+            hat = self.calculate_N(y)  # 最大熵的特征值分类
+            y_hat=0
+            y_sampleCount=0
+            for key, value in hat.items():
+                if value > y_sampleCount:
+                    y_sampleCount=value
+                    y_hat=key
+            tree1['y_hat'] = str(y_hat)
         return tree1
 
     # 计算CR
@@ -214,15 +225,40 @@ class DecisionTree:
     # 计算列表中匹配项的索引值
     def calculate_indexInList(self, x, y):
         l = []
-        acount = x.count(y)
-        for i in range(acount):
-            index = x.index(y)
-            add = 0
-            if len(l) > 0:
-                add = l[i - 1] + 1
-            l.append(index + add)
-            x = x[index + 1:]
+        #acount = x.count(y)
+        # for i in range(acount):
+        #     index = x.index(y)
+        #     add = 0
+        #     if len(l) > 0:
+        #         add = l[i - 1] + 1
+        #     l.append(index + add)
+        #     x = x[index + 1:]
+        index=0
+        for i in x:
+            if y>=0:
+                if i>=y:
+                    l.append(index)
+            else:
+                if i<=(-1*y):
+                    l.append(index)
+            index = index+1
         return l
+
+    #将连续型特征值二分类标准化
+    def calculate_sortInTwo(self,x,y):
+        average=sum(x)/len(x)
+        x1= []
+        for i in x:
+            if i >= average:
+                x1.append(average)
+            else: 
+                x1.append(-1*average)
+        return np.array(x1)
+    
+    #选取最优的分值
+    def calculate_BestNum(self,x,y):
+        x=sorted(x)
+
 
 
 def iris_type(s):
@@ -247,10 +283,10 @@ if __name__ == "__main__":
     # 为了可视化，仅使用前两列特征
     x = x[:, :2]
     x_train, x_test, y_train, y_test = train_test_split(
-        x, y, test_size=0.15, random_state=1)
+        x, y, test_size=0.25, random_state=1)
 
     # 决策树参数估计
-    model = DecisionTree(criterion='gini')
+    model = DecisionTree(criterion='gini',max_depth=5)
     model = model.fit(x_train, y_train.reshape(len(y_train), 1))
     y_test_hat = model.predict(x_test)      # 测试数据
 
