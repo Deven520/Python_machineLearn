@@ -46,12 +46,11 @@ class DecisionTree:
     # 选取最匹配的key值
     def select_close(self, index, dic):
         result = index
-        close = 9999999
         for key, value in dic.items():
-            i = (key - index) ** 2
-            if i <= close:
-                close = i
-                result = key
+            if key > 0 and index >= key:
+                result=key
+            elif key <0 and index<(key*-1):
+                result=key
         return result
 
     # 递归生成树
@@ -60,14 +59,17 @@ class DecisionTree:
         data = np.hstack((x, y))
         acount_A = len(x[0])
         d = []  # 熵列表
+        l=[]#最佳值列表
         # 遍历获取熵值列表
         for i in range(acount_A):
             x1 = x[:, i]
-            x1 = self.calculate_sortInTwo(x1,y)
+            bestX=self.calculate_BestNum(x1,y)
+            x1 = self.calculate_sortInTwo(x1, bestX)
             d.append(self.calculateEntropy(x1, y))
+            l.append(bestX)
         max1 = max(d)  # 最大熵值
         max_index = d.index(max1)  # 获得最大熵的索引值
-        x1 = self.calculate_sortInTwo(x[:, max_index],y)
+        x1 = self.calculate_sortInTwo(x[:, max_index],l[max_index])
         A = self.calculate_N(x1)  # 最大熵的特征值分类
         # 节点符值
         tree1['Entropy'] = max1
@@ -76,7 +78,7 @@ class DecisionTree:
         tree1['A'] = A
         tree1['depth'] = depth
         # 判定熵值和树深是否有效(预剪枝)
-        if max1 > 0.01 and self.max_depth > depth:
+        if max1 > 1 and self.max_depth > depth:
             Cr = max1*1*len(data)
             tree1['Cr'] = Cr   # 剪枝后的评价数
             x1 = list(x[:, max_index])
@@ -89,18 +91,18 @@ class DecisionTree:
                                                              y2.reshape(len(y2), 1), depth + 1)
             CR = self.calculate_CR(tree1)
             tree1['CR'] = CR
-            print("CR="+str(CR))
-            print("Cr="+str(Cr))
+            #print("CR="+str(CR))
+            #print("Cr="+str(Cr))
             nk = self.calculate_Nk(tree1)
-            print("nk="+str(nk))
+            #print("nk="+str(nk))
             alpha = (Cr-CR)/(nk-1)
             tree1['alpha'] = alpha
-            print("al="+str(alpha))
+            #print("al="+str(alpha))
         else:
             Cr = max1*1*len(data)
             tree1['Cr'] = Cr   # 剪枝后的评价数
-            print("Cr="+str(Cr))
-            print("depth="+str(depth))
+            #print("Cr="+str(Cr))
+            #print("depth="+str(depth))
             hat = self.calculate_N(y)  # 最大熵的特征值分类
             y_hat=0
             y_sampleCount=0
@@ -239,14 +241,13 @@ class DecisionTree:
                 if i>=y:
                     l.append(index)
             else:
-                if i<=(-1*y):
+                if i<(-1*y):
                     l.append(index)
             index = index+1
         return l
 
     #将连续型特征值二分类标准化
-    def calculate_sortInTwo(self,x,y):
-        average=sum(x)/len(x)
+    def calculate_sortInTwo(self, x, average):
         x1= []
         for i in x:
             if i >= average:
@@ -255,9 +256,29 @@ class DecisionTree:
                 x1.append(-1*average)
         return np.array(x1)
     
+    #计算划分值
+    def calculate_divideNum(self,x):
+        x=sorted(x)
+        l=[]
+        if len(x)==1:
+            l.append(x[0])
+        else:
+            for i in range(len(x)):
+                if i>=1:
+                    l.append((x[i-1]+x[i])/2)            
+        return l
+
     #选取最优的分值
     def calculate_BestNum(self,x,y):
-        x=sorted(x)
+        l=self.calculate_divideNum(x)
+        d = []  # 熵列表
+        # 遍历获取熵值列表
+        for i in l:
+            x1 = self.calculate_sortInTwo(x, i)
+            d.append(self.calculateEntropy(x1, y))
+        max1 = max(d)  # 最大熵值
+        max_index = d.index(max1)  # 获得最大熵的索引值
+        return l[max_index]
 
 
 
@@ -283,10 +304,10 @@ if __name__ == "__main__":
     # 为了可视化，仅使用前两列特征
     x = x[:, :2]
     x_train, x_test, y_train, y_test = train_test_split(
-        x, y, test_size=0.25, random_state=1)
+        x, y, test_size=0.5, random_state=1)
 
     # 决策树参数估计
-    model = DecisionTree(criterion='gini',max_depth=5)
+    model = DecisionTree(criterion='gini',max_depth=15)
     model = model.fit(x_train, y_train.reshape(len(y_train), 1))
     y_test_hat = model.predict(x_test)      # 测试数据
 
