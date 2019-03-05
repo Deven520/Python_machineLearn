@@ -78,7 +78,7 @@ class DecisionTree:
         tree1['A'] = A
         tree1['depth'] = depth
         # 判定熵值和树深是否有效(预剪枝)
-        if max1 > 1 and self.max_depth > depth:
+        if max1 > 0.2 and self.max_depth > depth:
             Cr = max1*1*len(data)
             tree1['Cr'] = Cr   # 剪枝后的评价数
             x1 = list(x[:, max_index])
@@ -227,14 +227,6 @@ class DecisionTree:
     # 计算列表中匹配项的索引值
     def calculate_indexInList(self, x, y):
         l = []
-        #acount = x.count(y)
-        # for i in range(acount):
-        #     index = x.index(y)
-        #     add = 0
-        #     if len(l) > 0:
-        #         add = l[i - 1] + 1
-        #     l.append(index + add)
-        #     x = x[index + 1:]
         index=0
         for i in x:
             if y>=0:
@@ -302,12 +294,12 @@ if __name__ == "__main__":
     le.fit(['Iris-setosa', 'Iris-versicolor', 'Iris-virginica'])
     y = le.transform(y)
     # 为了可视化，仅使用前两列特征
-    x = x[:, :2]
+    x = x[:,2 :4]
     x_train, x_test, y_train, y_test = train_test_split(
         x, y, test_size=0.5, random_state=1)
 
     # 决策树参数估计
-    model = DecisionTree(criterion='gini',max_depth=15)
+    model = DecisionTree(criterion='ID4.5',max_depth=7)
     model = model.fit(x_train, y_train.reshape(len(y_train), 1))
     y_test_hat = model.predict(x_test)      # 测试数据
 
