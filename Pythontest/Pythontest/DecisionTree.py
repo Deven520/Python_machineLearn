@@ -81,20 +81,23 @@ class DecisionTree:
         if max1 > 0.001 and self.max_depth > depth:
             Cr = max1*1*len(data)
             tree1['Cr'] = Cr   # 剪枝后的评价数
-            x1 = list(x[:, max_index])
+            x3 = list(x[:, max_index])
             for key, value in A.items():
-                indexs = self.calculate_indexInList(x1, key)
+                indexs = self.calculate_indexInList(x3, key)
+                #print("index="+str(indexs))
+                #print(data)
                 data_new = np.array([data[i, :] for i in indexs])  # 获取分类后的样本
+                #print(data_new)
                 x2 = data_new[:, :-1]
                 y2 = data_new[:, -1]
                 tree1['child_' + str(key)] = self.CreateTree(x2,
                                                              y2.reshape(len(y2), 1), depth + 1)
             CR = self.calculate_CR(tree1)
             tree1['CR'] = CR
-            print("CR="+str(CR))
-            print("Cr="+str(Cr))
+            #print("CR="+str(CR))
+            #print("Cr="+str(Cr))
             nk = self.calculate_Nk(tree1)
-            print("nk="+str(nk))
+            #print("nk="+str(nk))
             alpha = (Cr-CR)/(nk-1)
             tree1['alpha'] = alpha
             #print("al="+str(alpha))
@@ -115,8 +118,8 @@ class DecisionTree:
 
     # 计算CR
     def calculate_CR(self, tree):
-        index = tree['index']
-        x_hat = x[index]
+        #index = tree['index']
+        #x_hat = x[index]
         A = tree["A"]
         if tree["y_hat"].__len__() != 0:
             return float(tree['Cr'])
@@ -128,8 +131,8 @@ class DecisionTree:
 
     # 计算子节点数
     def calculate_Nk(self, tree):
-        index = tree['index']
-        x_hat = x[index]
+        #index = tree['index']
+        #x_hat = x[index]
         A = tree["A"]
         if tree["y_hat"].__len__() != 0:
             return 1
@@ -299,7 +302,7 @@ if __name__ == "__main__":
         x, y, test_size=0.5, random_state=1)
 
     # 决策树参数估计
-    model = DecisionTree(criterion='ID4.5',max_depth=7)
+    model = DecisionTree(criterion='ID4.5',max_depth=5)
     model = model.fit(x_train, y_train.reshape(len(y_train), 1))
     y_test_hat = model.predict(x_test)      # 测试数据
 
