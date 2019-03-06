@@ -78,7 +78,7 @@ class DecisionTree:
         tree1['A'] = A
         tree1['depth'] = depth
         # 判定熵值和树深是否有效(预剪枝)
-        if max1 > 0.2 and self.max_depth > depth:
+        if max1 > 0.001 and self.max_depth > depth:
             Cr = max1*1*len(data)
             tree1['Cr'] = Cr   # 剪枝后的评价数
             x1 = list(x[:, max_index])
@@ -91,10 +91,10 @@ class DecisionTree:
                                                              y2.reshape(len(y2), 1), depth + 1)
             CR = self.calculate_CR(tree1)
             tree1['CR'] = CR
-            #print("CR="+str(CR))
-            #print("Cr="+str(Cr))
+            print("CR="+str(CR))
+            print("Cr="+str(Cr))
             nk = self.calculate_Nk(tree1)
-            #print("nk="+str(nk))
+            print("nk="+str(nk))
             alpha = (Cr-CR)/(nk-1)
             tree1['alpha'] = alpha
             #print("al="+str(alpha))
@@ -220,7 +220,7 @@ class DecisionTree:
         result = {}
         for i_key, i_value in k.items():
             list = i_key.split(',')
-            if list[0].find(str(index)) != -1:
+            if str(list[0])==str(index):
                 result[i_key] = i_value
         return result
 
@@ -294,7 +294,7 @@ if __name__ == "__main__":
     le.fit(['Iris-setosa', 'Iris-versicolor', 'Iris-virginica'])
     y = le.transform(y)
     # 为了可视化，仅使用前两列特征
-    x = x[:,2 :4]
+    x = x[:,:2]
     x_train, x_test, y_train, y_test = train_test_split(
         x, y, test_size=0.5, random_state=1)
 
