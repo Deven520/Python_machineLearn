@@ -299,7 +299,7 @@ if __name__ == "__main__":
     # 为了可视化，仅使用前两列特征
     x = x[:,:2]
     x_train, x_test, y_train, y_test = train_test_split(
-        x, y, test_size=0.5, random_state=1)
+        x, y, test_size=0.25, random_state=1)
 
     # 决策树参数估计
     model = DecisionTree(criterion='ID4.5',max_depth=5)
