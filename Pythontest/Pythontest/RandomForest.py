@@ -71,7 +71,7 @@ if __name__ == "__main__":
 
     mpl.rcParams['font.sans-serif'] = [u'SimHei']
     mpl.rcParams['axes.unicode_minus'] = False
-    path = u'D:\Python_machineLearn\Pythontest\Pythontest\8.iris.data'  # 数据文件路径
+    path = u'8.iris.data'  # 数据文件路径
     df = pd.read_csv(path, header=0)
     x = df.values[:, :-1]
     y = df.values[:, -1]

@@ -4,13 +4,14 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>e6179a35-401b-401a-acdd-8154940291f3</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>Pythontest.py</StartupFile>
+    <StartupFile>SVM.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
     <Name>Pythontest</Name>
     <RootNamespace>Pythontest</RootNamespace>
+    <InterpreterId>Global|ContinuumAnalytics|Anaconda36-64</InterpreterId>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugSymbols>true</DebugSymbols>
@@ -21,19 +22,27 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="DecisionTree.py" />
     <Compile Include="DecisionTress.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="gradientdescent.py" />
     <Compile Include="Iri_DecisionTress.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Pythontest.py" />
+    <Compile Include="RandomForest.py" />
+    <Compile Include="SVM.py">
+      <SubType>Code</SubType>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <Content Include="8.iris.data" />
     <Content Include="8.iris.names" />
     <Content Include="graphviz-2.38.msi" />
     <Content Include="iris_tree.dot" />
+  </ItemGroup>
+  <ItemGroup>
+    <InterpreterReference Include="Global|ContinuumAnalytics|Anaconda36-64" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in
