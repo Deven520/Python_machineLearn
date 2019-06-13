@@ -23,6 +23,7 @@ class SVM(object):
         self.b = 0 #np.array([0 for i in range(len(traindata))]).reshape(len(traindata),1) #b参数
         self.xl = traindata[:,:-1] #训练数据x
         self.yl = traindata[:,-1:] #训练数据结果y
+        self.eCache = np.array([0 for i in range(len(traindata))]) # e 的缓存
 
     # 拟合函数
     def fit(self, x, y):
@@ -39,12 +40,59 @@ class SVM(object):
         y_hat = np.dot(x,self.w) + self.b
         return y_hat
 
-    # 根据a值得出w
+    # 根据a值更新w
     def update_w(self):
         for i in range(len(self.xl)):
             wi = self.a[i] * self.yl[i] * self.xl[i,:]
             self.w = self.w + wi
         return self
+
+    #根据kkt条件选择a1和a2
+    def selecA1andA2(self):
+        i_a1_sel = 0
+        max_error1 = 0
+        max_error2 = 0
+        max_error3 = 0
+        first_sel = 0
+        #遍历选择符合kkt条件的a1
+        for i in range(len(self.a)):
+            xi = self.xl[i]
+            yi = self.yl[i]
+            ai = self.a[i]
+            error = self.cal_gx(i) * yi #误差
+            #优先选择违反0<ai<C => yi*gi=1
+            if ai > 0 and ai < sself.C and error != 1 and (1 - error) ** 2 > max_error1:
+                max_error1 = (1 - error) ** 2
+                i_a1_sel = i
+                first_sel = 1
+            elif ai == 0 and error < 1 and (1 - error) ** 2 > max_error2 and first_sel == 0:
+                max_error1 = (1 - error) ** 2
+                i_a1_sel = i
+            elif ai == self.C and error > 1 and (1 - error) ** 2 > max_error2 and first_sel == 0:
+                max_error1 = (1 - error) ** 2
+                i_a1_sel = i
+        #遍历选择a2
+        i_a2_sel = 0
+        max_error4 = 0
+        e1 = self.eCache[i_a1_sel]
+        for i in range(len(self.a)):
+            error = (e1 - self.eCache[i]) ** 2
+            if error > max_error4:
+                i_a2_sel = i
+                max_error4 = error
+        return i_a1_sel,i_a2_sel
+
+    #计算g(xi)
+    def cal_gx(self,i):
+        xi = self.xl[i]
+        yi = self.yl[i]
+        gi = np.dot(x,self.w) + self.b
+        return gi
+
+    #计算b
+    def cal_b(self,i_a1,i_a2):
+
+        return
 
 if __name__ == "__main__":
     mpl.rcParams['font.sans-serif'] = [u'SimHei']
