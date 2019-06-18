@@ -12,7 +12,7 @@ class SVM(object):
     """支持向量积算法简单实现"""
 
     # 初始化
-    def __init__(self,traindata=[], kernel='kernel',maxIter=1000,C=1,epsilon=''):
+    def __init__(self,traindata=[], kernel='kernel',maxIter=1000,C=1,epsilon='',r=1):
         self.kernel = kernel #核函数
         self.traindata = traindata #训练数据
         self.maxIter = maxIter #最大项
@@ -20,10 +20,11 @@ class SVM(object):
         self.epsilon = epsilon
         self.w = np.array([0 for i in range(len(traindata[0]) - 1)]) #w参数
         self.a = np.array([0 for i in range(len(traindata))]) #a参数
-        self.b = 0 #np.array([0 for i in range(len(traindata))]).reshape(len(traindata),1) #b参数
+        self.b = 0  #b参数
         self.xl = traindata[:,:-1] #训练数据x
         self.yl = traindata[:,-1:] #训练数据结果y
         self.eCache = np.array([0 for i in range(len(traindata))]) # e 的缓存
+        self.r = r #高斯核函数超参数r
 
     # 拟合函数
     def fit(self, x, y):
@@ -89,9 +90,26 @@ class SVM(object):
         gi = np.dot(x,self.w) + self.b
         return gi
 
-    #计算b
-    def cal_b(self,i_a1,i_a2):
+    #计算并b
+    def cal_b(self,i_a1,a1_new,i_a2,a2_new):
+        #b1_new=
+        return
 
+    #计算核函数kenrel
+    def cal_kenrel(self,x,z):
+        resullt = 0
+        #线性核函数
+        if self.kernel.upper == 'LINE':
+            result = x * z
+        #高斯核函数
+        elif self.kernel.upper == 'RBF':
+            result = np.exp(-self.r*(x-z)**2)
+        return
+
+    #计算并更新E
+    def cal_E(self):
+        for i in range(len(self.eCache)):
+            self.eCache[i] = self.cal_gx(i) - self.yl[i]
         return
 
 if __name__ == "__main__":
