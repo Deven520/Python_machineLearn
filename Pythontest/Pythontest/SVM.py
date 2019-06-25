@@ -12,7 +12,7 @@ class SVM(object):
     """支持向量积算法简单实现"""
 
     # 初始化
-    def __init__(self,traindata=[], kernel='kernel',maxIter=1000,C=1,epsilon=0,r=1):
+    def __init__(self,traindata=[], kernel='LINE',maxIter=1000,C=1,epsilon=0,r=1):
         self.kernel = kernel #核函数
         self.traindata = traindata #训练数据
         self.maxIter = maxIter #最大项
@@ -37,12 +37,12 @@ class SVM(object):
         y_hat = np.array([])
         for i in range(len(x)):
             y_hatone = self.predict_one(x[i])
-            y_hat = y_hat + y_hatone
+            y_hat = np.append(y_hat,y_hatone)
         return y_hat
 
     #预测一个样本
     def predict_one(self,x):
-        y_hat = 0
+        y_hat = 0.0
         for i in range(len(self.a)):
             y_hat+=self.a[i] * self.yl[i] * self.cal_kenrel(x,self.xl[i])
         y_hat+=self.b
@@ -74,7 +74,7 @@ class SVM(object):
             ai = self.a[i]
             error = self.cal_gx(i) * yi #误差
             #优先选择违反0<ai<C => yi*gi=1
-            if ai > 0 and ai < sself.C and error != 1 and (1 - error) ** 2 > max_error1:
+            if ai > 0 and ai < self.C and error != 1 and (1 - error) ** 2 > max_error1:
                 max_error1 = (1 - error) ** 2
                 i_a1_sel = i
                 first_sel = 1
@@ -104,7 +104,7 @@ class SVM(object):
 
     #计算g(xi)
     def cal_gx(self,i):
-        gi = 0
+        gi = 0.0
         xi = self.xl[i]
         for j in range(len(self.a)):
             gi+=self.a[j] * self.yl[j] * self.cal_kenrel(xi,self.xl[j])
@@ -151,11 +151,12 @@ class SVM(object):
     def cal_kenrel(self,x,z):
         result = 0
         #线性核函数
-        if self.kernel.upper == 'LINE':
-            result = x * z
+        if self.kernel.upper() == 'LINE':
+            result = np.dot(x , z)
         #高斯核函数
-        elif self.kernel.upper == 'RBF':
-            result = np.exp(-self.r * (x - z) ** 2)
+        elif self.kernel.upper() == 'RBF':
+            d = np.dot((x - z),(x - z))
+            result = np.exp(-self.r * d)
         return result
 
     #计算并更新E
@@ -164,19 +165,82 @@ class SVM(object):
             self.eCache[i] = self.cal_gx(i) - self.yl[i]
         return
 
+def iris_type(s):
+    it = {'Iris-setosa': 0, 'Iris-versicolor': 1, 'Iris-virginica': 1}
+    return it[s]
+
+
+iris_feature = u'花萼长度', u'花萼宽度', u'花瓣长度', u'花瓣宽度'
+
 if __name__ == "__main__":
     mpl.rcParams['font.sans-serif'] = [u'SimHei']
     mpl.rcParams['axes.unicode_minus'] = False
-    x = np.array([1,1,2,3,2,2,2,1])
-    y = np.array([1,1,-1,-1])
-    traindata = np.hstack((x.reshape(4,2), y.reshape(4,1)))
-    print(str(traindata))
-    model = SVM(traindata=traindata)
-    print(str(model.w))
-    print(str(model.a))
-    print(str(model.xl))
-    print(str(model.yl))
-    model.fit()
-    x_hat = np.array([1,3,2,4,2,3,2,2]).reshape(4,2)
-    y_hat = model.predict(x_hat)
-    print(str(y_hat))
+    #x = np.array([1,1,2,3,2,2,2,1])
+    #y = np.array([1,1,-1,-1])
+    #traindata = np.hstack((x.reshape(4,2), y.reshape(4,1)))
+    #print(str(traindata))
+    #model = SVM(traindata=traindata)
+    #print(str(model.w))
+    #print(str(model.a))
+    #print(str(model.xl))
+    #print(str(model.yl))
+    #model.fit()
+    #x_hat = np.array([1,3,2,4,2,3,2,2]).reshape(4,2)
+    #y_hat = model.predict(x_hat)
+    #print(str(y_hat))
+
+
+    ##############################
+    path = u'8.iris.data'  # 数据文件路径
+    df = pd.read_csv(path, header=0)
+    x = df.values[:, :-1]
+    y = df.values[:, -1]
+    print('x = \n', x)
+    print('y = \n', y)
+    le = preprocessing.LabelEncoder()
+    le.fit(['Iris-setosa', 'Iris-versicolor', 'Iris-virginica'])
+    y = le.transform(y)
+    # 为了可视化，仅使用前两列特征
+    #x = x[:,:2]
+    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.25, random_state=1)
+
+    # 决策树参数估计
+    #model = DecisionTree(criterion='ID4.5',max_depth=5)
+    #model = model.fit(x_train, y_train.reshape(len(y_train), 1))
+    y_test_hat = []# model.predict(x_test) # 测试数据
+
+
+    # 画图
+    N, M = 100, 100  # 横纵各采样多少个值
+    x1_min, x1_max = x[:, 0].min(), x[:, 0].max()  # 第0列的范围
+    x2_min, x2_max = x[:, 1].min(), x[:, 1].max()  # 第1列的范围
+    t1 = np.linspace(x1_min, x1_max, N)
+    t2 = np.linspace(x2_min, x2_max, M)
+    x1, x2 = np.meshgrid(t1, t2)  # 生成网格采样点
+    x_show = np.stack((x1.flat, x2.flat), axis=1)  # 测试点
+
+    # # 无意义，只是为了凑另外两个维度
+    # # 打开该注释前，确保注释掉x = x[:, :2]
+    x3 = np.ones(x1.size) * np.average(x[:, 2])
+    x4 = np.ones(x1.size) * np.average(x[:, 3])
+    x_test = np.stack((x1.flat, x2.flat, x3, x4), axis=1) # 测试点
+
+    cm_light = mpl.colors.ListedColormap(['#A0FFA0', '#FFA0A0', '#A0A0FF'])
+    cm_dark = mpl.colors.ListedColormap(['g', 'r', 'b'])
+    y_show_hat = []#model.predict(x_show) # 预测值
+    print("xshow=" + str(x_show))
+    print("yshow=" + str(y_show_hat))
+    y_show_hat = np.array([]) #y_show_hat.reshape(x1.shape) # 使之与输入的形状相同
+    plt.figure(facecolor='w')
+    plt.pcolormesh(x1, x2, y_show_hat, cmap=cm_light)  # 预测值的显示
+    plt.scatter(x_test[:, 0], x_test[:, 1], c=y_test.ravel(),
+                edgecolors='k', s=100, cmap=cm_dark, marker='o')  # 测试数据
+    plt.scatter(x[:, 0], x[:, 1], c=y.ravel(),
+                edgecolors='k', s=40, cmap=cm_dark)  # 全部数据
+    plt.xlabel(iris_feature[0], fontsize=15)
+    plt.ylabel(iris_feature[1], fontsize=15)
+    plt.xlim(x1_min, x1_max)
+    plt.ylim(x2_min, x2_max)
+    plt.grid(True)
+    plt.title(u'鸢尾花数据的决策树分类', fontsize=17)
+    plt.show()
