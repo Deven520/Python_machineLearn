@@ -12,18 +12,18 @@ class SVM(object):
     """支持向量积算法简单实现"""
 
     # 初始化
-    def __init__(self,traindata=[], kernel='LINE',maxIter=1000,C=1,epsilon=0,r=1):
+    def __init__(self,traindata=[], kernel='LINE',maxIter=1000,C=2,epsilon=0,r=1):
         self.kernel = kernel #核函数
         self.traindata = traindata #训练数据
         self.maxIter = maxIter #最大项
         self.C = C #惩罚因子
         self.epsilon = epsilon
-        self.w = np.array([0 for i in range(len(traindata[0]) - 1)]) #w参数
-        self.a = np.array([0 for i in range(len(traindata))]) #a参数
+        self.w = np.array([0.0 for i in range(len(traindata[0]) - 1)]) #w参数
+        self.a = np.array([0.0 for i in range(len(traindata))]) #a参数
         self.b = 0  #b参数
         self.xl = traindata[:,:-1] #训练数据x
         self.yl = traindata[:,-1:] #训练数据结果y
-        self.eCache = np.array([0 for i in range(len(traindata))]) # e 的缓存
+        self.eCache = np.array([0.0 for i in range(len(traindata))]) # e 的缓存
         self.r = r #高斯核函数超参数r
 
     # 拟合函数
@@ -46,6 +46,7 @@ class SVM(object):
         for i in range(len(self.a)):
             y_hat+=self.a[i] * self.yl[i] * self.cal_kenrel(x,self.xl[i])
         y_hat+=self.b
+        print('y_hat = \n', y_hat)
         if y_hat >= 0:
             y_hat = 1
         else:
@@ -67,37 +68,38 @@ class SVM(object):
         max_error2 = 0
         max_error3 = 0
         first_sel = 0
-        #遍历选择符合kkt条件的a1
-        for i in range(len(self.a)):
-            xi = self.xl[i]
-            yi = self.yl[i]
-            ai = self.a[i]
-            error = self.cal_gx(i) * yi #误差
-            #优先选择违反0<ai<C => yi*gi=1
-            if ai > 0 and ai < self.C and error != 1 and (1 - error) ** 2 > max_error1:
-                max_error1 = (1 - error) ** 2
-                i_a1_sel = i
-                first_sel = 1
-            elif ai == 0 and error < 1 and (1 - error) ** 2 > max_error2 and first_sel == 0:
-                max_error1 = (1 - error) ** 2
-                i_a1_sel = i
-            elif ai == self.C and error > 1 and (1 - error) ** 2 > max_error2 and first_sel == 0:
-                max_error1 = (1 - error) ** 2
-                i_a1_sel = i
-        #遍历选择a2
         i_a2_sel = 0
         max_error4 = 0
-        e1 = self.eCache[i_a1_sel]
-        for i in range(len(self.a)):
-            error = (e1 - self.eCache[i]) ** 2
-            if error > max_error4:
-                i_a2_sel = i
-                max_error4 = error
-        #判断是否可以跳出循环
         isover = 0
-        if i_a1_sel == 0 and max_error1 == 0 and max_error2 == 0 and max_error2 == 0:
-            isover = 1
-        else:
+        while i_a1_sel == i_a2_sel and isover == 0:
+            #遍历选择符合kkt条件的a1
+            for i in range(len(self.a)):
+                xi = self.xl[i]
+                yi = self.yl[i]
+                ai = self.a[i]
+                error = self.cal_gx(i) * yi #误差
+                #优先选择违反0<ai<C => yi*gi=1
+                if ai > 0 and ai < self.C and error != 1 and (1 - error) ** 2 > max_error1:
+                    max_error1 = (1 - error) ** 2
+                    i_a1_sel = i
+                    first_sel = 1
+                elif ai == 0 and error < 1 and (1 - error) ** 2 > max_error2 and first_sel == 0:
+                    max_error2 = (1 - error) ** 2
+                    i_a1_sel = i
+                elif ai == self.C and error > 1 and (1 - error) ** 2 > max_error2 and first_sel == 0:
+                    max_error2 = (1 - error) ** 2
+                    i_a1_sel = i
+            #遍历选择a2
+            e1 = self.eCache[i_a1_sel]
+            for i in range(len(self.a)):
+                error = (e1 - self.eCache[i]) ** 2
+                if error >= max_error4 :
+                    i_a2_sel = i
+                    max_error4 = error
+            #判断是否可以跳出循环
+            if i_a1_sel == 0 and max_error1 == 0 and max_error2 == 0 and max_error4 == 0:
+                isover = 1
+        if isover == 0:
             self.cal_b(i_a1_sel,i_a2_sel)
             self.cal_E()
         return isover
@@ -142,10 +144,12 @@ class SVM(object):
         b2new = self.b - self.eCache[i_a2] - self.yl[i_a1] * self.cal_kenrel(self.xl[i_a1],self.xl[i_a2]) * (a1new - self.a[i_a1]) - self.yl[i_a2] * self.cal_kenrel(self.xl[i_a2],self.xl[i_a2]) * (a2new - self.a[i_a2])
         bnew = (b1new + b2new) / 2
         #更新
+        c = self.a[i_a1]
         self.a[i_a1] = a1new
+        d = self.a[i_a1]
         self.a[i_a2] = a2new
         self.b = bnew
-        return
+        return self
 
     #计算核函数kenrel
     def cal_kenrel(self,x,z):
@@ -163,10 +167,10 @@ class SVM(object):
     def cal_E(self):
         for i in range(len(self.eCache)):
             self.eCache[i] = self.cal_gx(i) - self.yl[i]
-        return
+        return self
 
 def iris_type(s):
-    it = {'Iris-setosa': 0, 'Iris-versicolor': 1, 'Iris-virginica': 1}
+    it = {'Iris-setosa': 0, 'Iris-versicolor': 1, 'Iris-virginica': 2}
     return it[s]
 
 
@@ -193,20 +197,31 @@ if __name__ == "__main__":
     ##############################
     path = u'8.iris.data'  # 数据文件路径
     df = pd.read_csv(path, header=0)
-    x = df.values[:, :-1]
-    y = df.values[:, -1]
-    print('x = \n', x)
-    print('y = \n', y)
+    df = df.values[0:99,:]
+    x = df[:, :-1]
+    y = df[:, -1]
     le = preprocessing.LabelEncoder()
     le.fit(['Iris-setosa', 'Iris-versicolor', 'Iris-virginica'])
     y = le.transform(y)
     # 为了可视化，仅使用前两列特征
-    #x = x[:,:2]
+    x = x[:,:2]
+    y1 = np.array([])
+    for i in y:
+        if i == 0:
+            y1 = np.append(y1,-1)
+        else:
+             y1 = np.append(y1,i)
+    y = y1
+    print('x = \n', x)
+    print('y = \n', y)
     x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.25, random_state=1)
 
     # 决策树参数估计
-    #model = DecisionTree(criterion='ID4.5',max_depth=5)
-    #model = model.fit(x_train, y_train.reshape(len(y_train), 1))
+    traindata = np.hstack((x, y.reshape(len(x),1)))
+    print('traindata = \n', traindata)
+    model = SVM(traindata=traindata)
+    model.fit()
+    print(str(model.a))
     y_test_hat = []# model.predict(x_test) # 测试数据
 
 
@@ -221,16 +236,16 @@ if __name__ == "__main__":
 
     # # 无意义，只是为了凑另外两个维度
     # # 打开该注释前，确保注释掉x = x[:, :2]
-    x3 = np.ones(x1.size) * np.average(x[:, 2])
-    x4 = np.ones(x1.size) * np.average(x[:, 3])
-    x_test = np.stack((x1.flat, x2.flat, x3, x4), axis=1) # 测试点
+    #x3 = np.ones(x1.size) * np.average(x[:, 2])
+    #x4 = np.ones(x1.size) * np.average(x[:, 3])
+    #x_test = np.stack((x1.flat, x2.flat, x3, x4), axis=1) # 测试点
 
     cm_light = mpl.colors.ListedColormap(['#A0FFA0', '#FFA0A0', '#A0A0FF'])
-    cm_dark = mpl.colors.ListedColormap(['g', 'r', 'b'])
-    y_show_hat = []#model.predict(x_show) # 预测值
+    cm_dark = mpl.colors.ListedColormap(['g', 'r', 'b'])    
+    y_show_hat = model.predict(x_show)#np.array([0 for i in range(len(x_show))]) #model.predict(x_show) # 预测值
     print("xshow=" + str(x_show))
     print("yshow=" + str(y_show_hat))
-    y_show_hat = np.array([]) #y_show_hat.reshape(x1.shape) # 使之与输入的形状相同
+    y_show_hat = y_show_hat.reshape(x1.shape) # 使之与输入的形状相同
     plt.figure(facecolor='w')
     plt.pcolormesh(x1, x2, y_show_hat, cmap=cm_light)  # 预测值的显示
     plt.scatter(x_test[:, 0], x_test[:, 1], c=y_test.ravel(),
@@ -242,5 +257,5 @@ if __name__ == "__main__":
     plt.xlim(x1_min, x1_max)
     plt.ylim(x2_min, x2_max)
     plt.grid(True)
-    plt.title(u'鸢尾花数据的决策树分类', fontsize=17)
+    plt.title(u'鸢尾花数据的SVM分类', fontsize=17)
     plt.show()
