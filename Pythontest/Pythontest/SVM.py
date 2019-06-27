@@ -12,12 +12,12 @@ class SVM(object):
     """支持向量积算法简单实现"""
 
     # 初始化
-    def __init__(self,traindata=[], kernel='LINE',maxIter=1000,C=2,epsilon=0,r=1):
+    def __init__(self,traindata=[], kernel='LINE',maxIter=1000,C=2,epsilon=0.00001,r=1):
         self.kernel = kernel #核函数
         self.traindata = traindata #训练数据
         self.maxIter = maxIter #最大项
         self.C = C #惩罚因子
-        self.epsilon = epsilon
+        self.epsilon = epsilon #误差**2精度
         self.w = np.array([0.0 for i in range(len(traindata[0]) - 1)]) #w参数
         self.a = np.array([0.0 for i in range(len(traindata))]) #a参数
         self.b = 0  #b参数
@@ -25,7 +25,8 @@ class SVM(object):
         self.yl = traindata[:,-1:] #训练数据结果y
         self.eCache = np.array([0.0 for i in range(len(traindata))]) # e 的缓存
         self.r = r #高斯核函数超参数r
-
+        self.i_pre_a1 = 0 #上次迭代选择的a1索引
+        self.i_pre_a2 = 0 #上次迭代选择的a2索引
     # 拟合函数
     def fit(self):
         while self.SMO() == 0:
@@ -46,7 +47,6 @@ class SVM(object):
         for i in range(len(self.a)):
             y_hat+=self.a[i] * self.yl[i] * self.cal_kenrel(x,self.xl[i])
         y_hat+=self.b
-        print('y_hat = \n', y_hat)
         if y_hat >= 0:
             y_hat = 1
         else:
@@ -64,29 +64,33 @@ class SVM(object):
     #smo算法
     def SMO(self):
         i_a1_sel = 0
-        max_error1 = 0
-        max_error2 = 0
-        max_error3 = 0
         first_sel = 0
         i_a2_sel = 0
-        max_error4 = 0
         isover = 0
-        while i_a1_sel == i_a2_sel and isover == 0:
+        rebuilt = 0
+        while (i_a1_sel == i_a2_sel and isover == 0) or rebuilt == 1:
+            max_error1 = 0
+            max_error2 = 0
+            max_error3 = 0
+            max_error4 = 0
             #遍历选择符合kkt条件的a1
             for i in range(len(self.a)):
                 xi = self.xl[i]
                 yi = self.yl[i]
                 ai = self.a[i]
-                error = self.cal_gx(i) * yi #误差
+                if i==self.i_pre_a1 and rebuilt==1:
+                    error=0 #排除重复数
+                else:
+                    error = self.cal_gx(i) * yi #误差
                 #优先选择违反0<ai<C => yi*gi=1
-                if ai > 0 and ai < self.C and error != 1 and (1 - error) ** 2 > max_error1:
+                if ai > 0 and ai < self.C and error != 1 and (1 - error) ** 2 > max_error1 and (i != self.i_pre_a1 or i_a2_sel != self.i_pre_a2):
                     max_error1 = (1 - error) ** 2
                     i_a1_sel = i
                     first_sel = 1
-                elif ai == 0 and error < 1 and (1 - error) ** 2 > max_error2 and first_sel == 0:
+                elif ai == 0 and error < 1 and (1 - error) ** 2 > max_error2 and first_sel == 0 and (i != self.i_pre_a1 or i_a2_sel != self.i_pre_a2):
                     max_error2 = (1 - error) ** 2
                     i_a1_sel = i
-                elif ai == self.C and error > 1 and (1 - error) ** 2 > max_error2 and first_sel == 0:
+                elif ai == self.C and error > 1 and (1 - error) ** 2 > max_error2 and first_sel == 0 and (i != self.i_pre_a1 or i_a2_sel != self.i_pre_a2):
                     max_error2 = (1 - error) ** 2
                     i_a1_sel = i
             #遍历选择a2
@@ -96,8 +100,14 @@ class SVM(object):
                 if error >= max_error4 :
                     i_a2_sel = i
                     max_error4 = error
-            #判断是否可以跳出循环
-            if i_a1_sel == 0 and max_error1 == 0 and max_error2 == 0 and max_error4 == 0:
+            if i_a1_sel == self.i_pre_a1 and i_a2_sel == self.i_pre_a2:
+                rebuilt += 1
+            else:
+                rebuilt = 0
+                self.i_pre_a1 = i_a1_sel
+                self.i_pre_a2 = i_a2_sel
+            #判断是否可以跳出循环，误差在精度范围内可以跳出循环
+            if  (max_error1 <= self.epsilon and max_error2 <= self.epsilon and max_error4 <= self.epsilon) or rebuilt>=2 :
                 isover = 1
         if isover == 0:
             self.cal_b(i_a1_sel,i_a2_sel)
@@ -115,7 +125,28 @@ class SVM(object):
 
     #计算a2new
     def cal_a2new(self,i_a1,i_a2):
+        y1 = self.yl[i_a1]
+        y2 = self.yl[i_a2]
+        a1 = self.a[i_a1]
+        a2 = self.a[i_a2]
         a2new = self.a[i_a2] + self.yl[i_a2] * (self.eCache[i_a1] - self.eCache[i_a2]) / (self.cal_kenrel(self.xl[i_a1],self.xl[i_a1]) + self.cal_kenrel(self.xl[i_a2],self.xl[i_a2]) - 2 * self.cal_kenrel(self.xl[i_a1],self.xl[i_a2]))
+        L = 0 #下限
+        H = self.C #上限
+        if y1 != y2:
+            a_min_gap = a2 - a1
+            a_max_gap = self.C + a_min_gap
+        else:
+            a_min_gap = a2 + a1 - self.C
+            a_max_gap = a2 + a1
+        if a_min_gap >= L:
+            L = a_min_gap
+        if a_max_gap <= H:
+            H = a_max_gap
+        #根据上下限赋值
+        if a2new <= L:
+            a2new = L
+        elif a2new >= H:
+            a2new = H
         return a2new
 
     #计算 ks
@@ -128,11 +159,10 @@ class SVM(object):
 
     #计算a1new
     def cal_a1new(self,a2new,i_a1,i_a2):
-        a1new = 0
-        if self.yl[i_a1] == self.yl[i_a2]:
-            a1new = self.cal_ks(i_a1,i_a2) - a2new
-        else:
-            a1new = self.cal_ks(i_a1,i_a2) + a2new
+        y1 = self.yl[i_a1]
+        y2 = self.yl[i_a2]
+        ks = self.cal_ks(i_a1,i_a2)
+        a1new = (ks - y2 * a2new) / y1
         return a1new
 
     #计算并更新a1,a2,b
