@@ -23,7 +23,7 @@ class SVM(object):
         self.b = 0  #b参数
         self.xl = traindata[:,:-1] #训练数据x
         self.yl = traindata[:,-1:] #训练数据结果y
-        self.eCache = np.array([0.0 for i in range(len(traindata))]) # e 的缓存
+        self.eCache = np.array([-self.yl[i] for i in range(len(traindata))]) # e 的缓存
         self.r = r #高斯核函数超参数r
         self.i_pre_a1 = 0 #上次迭代选择的a1索引
         self.i_pre_a2 = 0 #上次迭代选择的a2索引
@@ -78,8 +78,8 @@ class SVM(object):
                 xi = self.xl[i]
                 yi = self.yl[i]
                 ai = self.a[i]
-                if i==self.i_pre_a1 and rebuilt==1:
-                    error=0 #排除重复数
+                if i == self.i_pre_a1 and rebuilt == 1:
+                    error = 1 #排除重复数
                 else:
                     error = self.cal_gx(i) * yi #误差
                 #优先选择违反0<ai<C => yi*gi=1
@@ -97,7 +97,7 @@ class SVM(object):
             e1 = self.eCache[i_a1_sel]
             for i in range(len(self.a)):
                 error = (e1 - self.eCache[i]) ** 2
-                if error >= max_error4 :
+                if error > max_error4 :
                     i_a2_sel = i
                     max_error4 = error
             if i_a1_sel == self.i_pre_a1 and i_a2_sel == self.i_pre_a2:
@@ -107,21 +107,12 @@ class SVM(object):
                 self.i_pre_a1 = i_a1_sel
                 self.i_pre_a2 = i_a2_sel
             #判断是否可以跳出循环，误差在精度范围内可以跳出循环
-            if  (max_error1 <= self.epsilon and max_error2 <= self.epsilon and max_error4 <= self.epsilon) or rebuilt>=2 :
+            if  (max_error1 <= self.epsilon and max_error2 <= self.epsilon and max_error4 <= self.epsilon) or rebuilt >= 2 :
                 isover = 1
         if isover == 0:
             self.cal_b(i_a1_sel,i_a2_sel)
             self.cal_E()
         return isover
-
-    #计算g(xi)
-    def cal_gx(self,i):
-        gi = 0.0
-        xi = self.xl[i]
-        for j in range(len(self.a)):
-            gi+=self.a[j] * self.yl[j] * self.cal_kenrel(xi,self.xl[j])
-        gi+=self.b
-        return gi
 
     #计算a2new
     def cal_a2new(self,i_a1,i_a2):
@@ -162,7 +153,11 @@ class SVM(object):
         y1 = self.yl[i_a1]
         y2 = self.yl[i_a2]
         ks = self.cal_ks(i_a1,i_a2)
-        a1new = (ks - y2 * a2new) / y1
+        a1new = 0
+        if y1 != y2:
+            a1new = ks + a2new
+        else:
+            a1new = ks - a2new
         return a1new
 
     #计算并更新a1,a2,b
@@ -192,6 +187,15 @@ class SVM(object):
             d = np.dot((x - z),(x - z))
             result = np.exp(-self.r * d)
         return result
+
+    #计算g(xi)
+    def cal_gx(self,i):
+        gi = 0.0
+        xi = self.xl[i]
+        for j in range(len(self.a)):
+            gi+=self.a[j] * self.yl[j] * self.cal_kenrel(xi,self.xl[j])
+        gi+=self.b
+        return gi
 
     #计算并更新E
     def cal_E(self):
@@ -275,6 +279,7 @@ if __name__ == "__main__":
     y_show_hat = model.predict(x_show)#np.array([0 for i in range(len(x_show))]) #model.predict(x_show) # 预测值
     print("xshow=" + str(x_show))
     print("yshow=" + str(y_show_hat))
+    print("a=" + str(model.a))
     y_show_hat = y_show_hat.reshape(x1.shape) # 使之与输入的形状相同
     plt.figure(facecolor='w')
     plt.pcolormesh(x1, x2, y_show_hat, cmap=cm_light)  # 预测值的显示
