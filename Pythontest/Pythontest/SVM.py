@@ -12,7 +12,7 @@ class SVM(object):
     """支持向量积算法简单实现"""
 
     # 初始化
-    def __init__(self,traindata=[], kernel='LINE',maxIter=1000,C=2,epsilon=0.00001,r=1):
+    def __init__(self,traindata=[], kernel='LINE',maxIter=1000,C=100,epsilon=0.00001,r=1):
         self.kernel = kernel #核函数
         self.traindata = traindata #训练数据
         self.maxIter = maxIter #最大项
@@ -29,8 +29,8 @@ class SVM(object):
         self.i_pre_a2 = 0 #上次迭代选择的a2索引
     # 拟合函数
     def fit(self):
-        while self.SMO() == 0:
-            i = 0
+        while self.isover() == 1:
+            self.SMO()
         return self
 
     # 预测多个样本
@@ -90,8 +90,12 @@ class SVM(object):
                 elif ai == 0 and error < 1 and (1 - error) ** 2 > max_error2 and first_sel == 0 and (i != self.i_pre_a1 or i_a2_sel != self.i_pre_a2):
                     max_error2 = (1 - error) ** 2
                     i_a1_sel = i
+                    first_sel = 2
                 elif ai == self.C and error > 1 and (1 - error) ** 2 > max_error2 and first_sel == 0 and (i != self.i_pre_a1 or i_a2_sel != self.i_pre_a2):
                     max_error2 = (1 - error) ** 2
+                    i_a1_sel = i
+                    first_sel = 2
+                elif first_sel == 0 and (ai < 0 or ai > self.C) and (i != self.i_pre_a1 or i_a2_sel != self.i_pre_a2):
                     i_a1_sel = i
             #遍历选择a2
             e1 = self.eCache[i_a1_sel]
@@ -106,13 +110,33 @@ class SVM(object):
                 rebuilt = 0
                 self.i_pre_a1 = i_a1_sel
                 self.i_pre_a2 = i_a2_sel
-            #判断是否可以跳出循环，误差在精度范围内可以跳出循环
-            if  (max_error1 <= self.epsilon and max_error2 <= self.epsilon and max_error4 <= self.epsilon) or rebuilt >= 2 :
-                isover = 1
-        if isover == 0:
             self.cal_b(i_a1_sel,i_a2_sel)
             self.cal_E()
-        return isover
+        return self
+
+    #判断是否满足终止条件
+    def isover(self):
+        done = 0 #默认为是
+        for i in range(len(self.a)):
+            x = self.xl[i]
+            y = self.yl[i]
+            a = self.a[i]
+            gi = self.cal_gx(i)
+            error = (y * gi - 1) ** 2
+            if a > 0 and a < self.C and error > self.epsilon ** 2:
+                done = 1
+                break
+            elif a == 0 and gi * y < 1:
+                done = 1
+                break
+            elif a == self.C and gi * y > 1:
+                done = 1
+                break
+            elif a < 0 or a > self.C:
+                done = 1
+                break
+        return done
+
 
     #计算a2new
     def cal_a2new(self,i_a1,i_a2):
@@ -120,7 +144,9 @@ class SVM(object):
         y2 = self.yl[i_a2]
         a1 = self.a[i_a1]
         a2 = self.a[i_a2]
-        a2new = self.a[i_a2] + self.yl[i_a2] * (self.eCache[i_a1] - self.eCache[i_a2]) / (self.cal_kenrel(self.xl[i_a1],self.xl[i_a1]) + self.cal_kenrel(self.xl[i_a2],self.xl[i_a2]) - 2 * self.cal_kenrel(self.xl[i_a1],self.xl[i_a2]))
+        k = self.cal_kenrel(self.xl[i_a1],self.xl[i_a1]) + self.cal_kenrel(self.xl[i_a2],self.xl[i_a2]) - 2 * self.cal_kenrel(self.xl[i_a1],self.xl[i_a2])
+        e = self.eCache[i_a1] - self.eCache[i_a2] 
+        a2new = a2 + y2 * e / k
         L = 0 #下限
         H = self.C #上限
         if y1 != y2:
@@ -152,22 +178,39 @@ class SVM(object):
     def cal_a1new(self,a2new,i_a1,i_a2):
         y1 = self.yl[i_a1]
         y2 = self.yl[i_a2]
-        ks = self.cal_ks(i_a1,i_a2)
-        a1new = 0
-        if y1 != y2:
-            a1new = ks + a2new
-        else:
-            a1new = ks - a2new
-        return a1new
+        a1 = self.a[i_a1]
+        a2 = self.a[i_a2]
+        #ks = self.cal_ks(i_a1,i_a2)
+        a1new = a1 + y1 * y2 * (a2 - a2new)
+        L = 0 #下限
+        H = self.C #上限
+        #根据上下限赋值
+        if a1new <= L:
+            a2new += y1 * y2 * a1new
+            a1new = L
+        elif a1new >= H:
+            t = a1new - self.C
+            a2+=y1 * y2 * t
+            a1new = H
+        return a1new,a2new
 
     #计算并更新a1,a2,b
     def cal_b(self,i_a1,i_a2):
         #计算
         a2new = self.cal_a2new(i_a1,i_a2)
-        a1new = self.cal_a1new(a2new,i_a1,i_a2)
+        a1new,a2new = self.cal_a1new(a2new,i_a1,i_a2)
         b1new = self.yl[i_a1] - self.cal_ks(i_a1,i_a2) - a1new * self.yl[i_a1] * self.cal_kenrel(self.xl[i_a1],self.xl[i_a1]) - a2new * self.yl[i_a2] * self.cal_kenrel(self.xl[i_a2],self.xl[i_a1])
         b2new = self.b - self.eCache[i_a2] - self.yl[i_a1] * self.cal_kenrel(self.xl[i_a1],self.xl[i_a2]) * (a1new - self.a[i_a1]) - self.yl[i_a2] * self.cal_kenrel(self.xl[i_a2],self.xl[i_a2]) * (a2new - self.a[i_a2])
-        bnew = (b1new + b2new) / 2
+        if a2new > 0 and a2new < self.C:
+            bnew = b2new
+        elif a1new > 0 and a1new < self.C:
+            bnew = b1new
+        else:
+            bnew = (b1new + b2new) / 2
+        print("a1new=" + str(a1new))
+        print("a2new=" + str(a2new))
+        print("a=" + str(self.a))
+        print("e=" + str(self.eCache))
         #更新
         c = self.a[i_a1]
         self.a[i_a1] = a1new
@@ -181,7 +224,8 @@ class SVM(object):
         result = 0
         #线性核函数
         if self.kernel.upper() == 'LINE':
-            result = np.dot(x , z)
+            #result = np.dot(x , z)
+            result=x[0]*z[0]+x[1]*z[1]
         #高斯核函数
         elif self.kernel.upper() == 'RBF':
             d = np.dot((x - z),(x - z))
