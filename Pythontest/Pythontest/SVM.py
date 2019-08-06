@@ -12,10 +12,10 @@ class SVM(object):
     """支持向量积算法简单实现"""
 
     # 初始化
-    def __init__(self,traindata=[], kernel='LINE',maxIter=1000,C=100,epsilon=0.00001,r=1):
+    def __init__(self,traindata=[], kernel='LINE',maxIter=100,C=100,epsilon=0.00001,r=1):
         self.kernel = kernel #核函数
         self.traindata = traindata #训练数据
-        self.maxIter = maxIter #最大项
+        self.maxIter = maxIter #最大循环次数
         self.C = C #惩罚因子
         self.epsilon = epsilon #误差**2精度
         self.w = np.array([0.0 for i in range(len(traindata[0]) - 1)]) #w参数
@@ -23,14 +23,17 @@ class SVM(object):
         self.b = 0  #b参数
         self.xl = traindata[:,:-1] #训练数据x
         self.yl = traindata[:,-1:] #训练数据结果y
-        self.eCache = np.array([-self.yl[i] for i in range(len(traindata))]) # e 的缓存
+        self.eCache = np.array([0 for i in range(len(traindata))]) # e 的缓存
         self.r = r #高斯核函数超参数r
         self.i_pre_a1 = 0 #上次迭代选择的a1索引
         self.i_pre_a2 = 0 #上次迭代选择的a2索引
+        self.i_pre_a2List = []
     # 拟合函数
     def fit(self):
-        while self.isover() == 1:
+        count = 0
+        while self.isover() == 1 and count < self.maxIter:
             self.SMO()
+            count = count + 1
         return self
 
     # 预测多个样本
@@ -66,52 +69,69 @@ class SVM(object):
         i_a1_sel = 0
         first_sel = 0
         i_a2_sel = 0
-        isover = 0
         rebuilt = 0
-        while (i_a1_sel == i_a2_sel and isover == 0) or rebuilt == 1:
-            max_error1 = 0
-            max_error2 = 0
-            max_error3 = 0
-            max_error4 = 0
-            #遍历选择符合kkt条件的a1
-            for i in range(len(self.a)):
-                xi = self.xl[i]
-                yi = self.yl[i]
-                ai = self.a[i]
-                if i == self.i_pre_a1 and rebuilt == 1:
-                    error = 1 #排除重复数
-                else:
-                    error = self.cal_gx(i) * yi #误差
-                #优先选择违反0<ai<C => yi*gi=1
-                if ai > 0 and ai < self.C and error != 1 and (1 - error) ** 2 > max_error1 and (i != self.i_pre_a1 or i_a2_sel != self.i_pre_a2):
-                    max_error1 = (1 - error) ** 2
-                    i_a1_sel = i
-                    first_sel = 1
-                elif ai == 0 and error < 1 and (1 - error) ** 2 > max_error2 and first_sel == 0 and (i != self.i_pre_a1 or i_a2_sel != self.i_pre_a2):
-                    max_error2 = (1 - error) ** 2
-                    i_a1_sel = i
-                    first_sel = 2
-                elif ai == self.C and error > 1 and (1 - error) ** 2 > max_error2 and first_sel == 0 and (i != self.i_pre_a1 or i_a2_sel != self.i_pre_a2):
-                    max_error2 = (1 - error) ** 2
-                    i_a1_sel = i
-                    first_sel = 2
-                elif first_sel == 0 and (ai < 0 or ai > self.C) and (i != self.i_pre_a1 or i_a2_sel != self.i_pre_a2):
-                    i_a1_sel = i
-            #遍历选择a2
+        max_error1 = 0
+        max_error2 = 0
+        max_error3 = 0
+        #遍历选择符合kkt条件的a1
+        for i in range(len(self.a)):
+            xi = self.xl[i]
+            yi = self.yl[i]
+            ai = self.a[i]
+            error = self.cal_gx(i) * yi #误差
+            #优先选择违反0<ai<C => yi*gi=1
+            if ai > 0 and ai < self.C and error != 1 :
+                max_error1 = (1 - error) ** 2
+                i_a1_sel = i
+                first_sel = 1
+            elif ai == 0 and error < 1:
+                i_a1_sel = i
+                first_sel = 2
+            elif ai == self.C and error > 1 :
+                i_a1_sel = i
+                first_sel = 2
+            elif first_sel == 0 and (ai < 0 or ai > self.C):
+                i_a1_sel = i
+            if i_a1_sel == i:
+               i_a2_sel = self.selec_a2(i_a1_sel)
+               self.cal_All(i_a1_sel,i_a2_sel)
+        return self
+
+    #遍历选择a2
+    def selec_a2(self,i_a1_sel):        
+        i_a2_sel = 0
+        max_error4 = 0
+        isNoZero = np.nonzero(self.eCache)
+        if len(isNoZero[0]) > 1:
             e1 = self.eCache[i_a1_sel]
             for i in range(len(self.a)):
-                error = (e1 - self.eCache[i]) ** 2
-                if error > max_error4 :
-                    i_a2_sel = i
-                    max_error4 = error
-            if i_a1_sel == self.i_pre_a1 and i_a2_sel == self.i_pre_a2:
-                rebuilt += 1
+                if i not in self.i_pre_a2List:
+                    error = (e1 - self.eCache[i]) ** 2
+                    if error > max_error4 :
+                        i_a2_sel = i
+                        max_error4 = error
+            if i_a1_sel == self.i_pre_a1:
+                self.i_pre_a2List.append(i_a2_sel)
+                if len(self.a) == len(self.i_pre_a2List) + 1:
+                    rebuilt += 1
+                else:
+                    rebuilt = 0
             else:
+                self.i_pre_a2List = []
                 rebuilt = 0
-                self.i_pre_a1 = i_a1_sel
-                self.i_pre_a2 = i_a2_sel
-            self.cal_b(i_a1_sel,i_a2_sel)
-            self.cal_E()
+        else:
+            i_a2_sel = i_a1_sel
+            while (i_a1_sel == i_a2_sel):
+                i_a2_sel = int(np.random.uniform(0,len(self.a)))
+        return i_a2_sel
+
+    #计算过程
+    def cal_All(self,i_a1_sel,i_a2_sel):
+        self.i_pre_a1 = i_a1_sel
+        self.i_pre_a2 = i_a2_sel
+        self.cal_b(i_a1_sel,i_a2_sel)
+        self.cal_E(i_a1_sel)
+        self.cal_E(i_a2_sel)
         return self
 
     #判断是否满足终止条件
@@ -145,8 +165,10 @@ class SVM(object):
         a1 = self.a[i_a1]
         a2 = self.a[i_a2]
         k = self.cal_kenrel(self.xl[i_a1],self.xl[i_a1]) + self.cal_kenrel(self.xl[i_a2],self.xl[i_a2]) - 2 * self.cal_kenrel(self.xl[i_a1],self.xl[i_a2])
-        e = self.eCache[i_a1] - self.eCache[i_a2] 
-        a2new = a2 + y2 * e / k
+        e = self.eCache[i_a1] - self.eCache[i_a2]
+        a2new = a2
+        if k != 0:
+            a2new = a2 + y2 * e / k
         L = 0 #下限
         H = self.C #上限
         if y1 != y2:
@@ -197,6 +219,11 @@ class SVM(object):
     #计算并更新a1,a2,b
     def cal_b(self,i_a1,i_a2):
         #计算
+        print("e_PRE=" + str(self.eCache))
+        print("a1_i=" + str(i_a1))
+        print("a2_i=" + str(i_a2))
+        print("a1=" + str(self.a[i_a1]))
+        print("a2=" + str(self.a[i_a2]))
         a2new = self.cal_a2new(i_a1,i_a2)
         a1new,a2new = self.cal_a1new(a2new,i_a1,i_a2)
         b1new = self.yl[i_a1] - self.cal_ks(i_a1,i_a2) - a1new * self.yl[i_a1] * self.cal_kenrel(self.xl[i_a1],self.xl[i_a1]) - a2new * self.yl[i_a2] * self.cal_kenrel(self.xl[i_a2],self.xl[i_a1])
@@ -210,8 +237,10 @@ class SVM(object):
         print("a1new=" + str(a1new))
         print("a2new=" + str(a2new))
         print("a=" + str(self.a))
-        print("e=" + str(self.eCache))
-        #更新
+        print("e_SUB=" + str(self.eCache))
+        a2old = self.a[i_a2]
+        #if (np.abs(float(a2new)-a2old) > 0.00001):               
+            #更新
         c = self.a[i_a1]
         self.a[i_a1] = a1new
         d = self.a[i_a1]
@@ -225,7 +254,7 @@ class SVM(object):
         #线性核函数
         if self.kernel.upper() == 'LINE':
             #result = np.dot(x , z)
-            result=x[0]*z[0]+x[1]*z[1]
+            result = x[0] * z[0] + x[1] * z[1]
         #高斯核函数
         elif self.kernel.upper() == 'RBF':
             d = np.dot((x - z),(x - z))
@@ -242,9 +271,8 @@ class SVM(object):
         return gi
 
     #计算并更新E
-    def cal_E(self):
-        for i in range(len(self.eCache)):
-            self.eCache[i] = self.cal_gx(i) - self.yl[i]
+    def cal_E(self,i):
+        self.eCache[i] = self.cal_gx(i) - self.yl[i]
         return self
 
 def iris_type(s):
@@ -296,12 +324,16 @@ if __name__ == "__main__":
 
     # 决策树参数估计
     traindata = np.hstack((x, y.reshape(len(x),1)))
+    #去重
+    lis = traindata.tolist()
+    lis = list(set([tuple(t) for t in lis]))
+    lis = [list(v) for v in lis]
+    traindata = np.array(lis)
     print('traindata = \n', traindata)
     model = SVM(traindata=traindata)
     model.fit()
     print(str(model.a))
     y_test_hat = []# model.predict(x_test) # 测试数据
-
 
     # 画图
     N, M = 100, 100  # 横纵各采样多少个值
