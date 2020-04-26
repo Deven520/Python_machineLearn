@@ -12,7 +12,7 @@ class SVM(object):
     """支持向量积算法简单实现"""
 
     # 初始化
-    def __init__(self,traindata=[], kernel='LINE',maxIter=100,C=100,epsilon=0.00001,r=1):
+    def __init__(self,traindata=[], kernel='LINE',maxIter=1000,C=100,epsilon=0.001,r=1):
         self.kernel = kernel #核函数
         self.traindata = traindata #训练数据
         self.maxIter = maxIter #最大循环次数
@@ -28,6 +28,7 @@ class SVM(object):
         self.i_pre_a1 = 0 #上次迭代选择的a1索引
         self.i_pre_a2 = 0 #上次迭代选择的a2索引
         self.i_pre_a2List = []
+
     # 拟合函数
     def fit(self):
         count = 0
@@ -48,7 +49,7 @@ class SVM(object):
     def predict_one(self,x):
         y_hat = 0.0
         for i in range(len(self.a)):
-            y_hat+=self.a[i] * self.yl[i] * self.cal_kenrel(x,self.xl[i])
+            y_hat += self.a[i] * self.yl[i] * self.cal_kenrel(x,self.xl[i])
         y_hat+=self.b
         if y_hat >= 0:
             y_hat = 1
@@ -93,8 +94,8 @@ class SVM(object):
             elif first_sel == 0 and (ai < 0 or ai > self.C):
                 i_a1_sel = i
             if i_a1_sel == i:
-               i_a2_sel = self.selec_a2(i_a1_sel)
-               self.cal_All(i_a1_sel,i_a2_sel)
+                i_a2_sel = self.selec_a2(i_a1_sel)
+        self.cal_All(i_a1_sel,i_a2_sel)
         return self
 
     #遍历选择a2
@@ -239,7 +240,7 @@ class SVM(object):
         print("a=" + str(self.a))
         print("e_SUB=" + str(self.eCache))
         a2old = self.a[i_a2]
-        #if (np.abs(float(a2new)-a2old) > 0.00001):               
+        #if (np.abs(float(a2new)-a2old) > 0.00001):
             #更新
         c = self.a[i_a1]
         self.a[i_a1] = a1new
