@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>e6179a35-401b-401a-acdd-8154940291f3</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>SVM.py</StartupFile>
+    <StartupFile>KMeam.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -22,12 +22,16 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="16.1.kMeans.py" />
     <Compile Include="DecisionTree.py" />
     <Compile Include="DecisionTress.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="gradientdescent.py" />
     <Compile Include="Iri_DecisionTress.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="KMeam.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="RandomForest.py" />
