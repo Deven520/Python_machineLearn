@@ -122,7 +122,7 @@ if __name__ == "__main__":
     data3 = np.vstack((data[y == 0][:], data[y == 1][:50], data[y == 2][:20], data[y == 3][:5]))
     y3 = np.array([0] * 100 + [1] * 50 + [2] * 20 + [3] * 5)
 
-    cls = KMean(n_clusters=4)
+    cls = KMean(n_clusters=3)
     y_hat = cls.fit_predict(data)
     y2_hat = cls.fit_predict(data2)
     y3_hat = cls.fit_predict(data3)
